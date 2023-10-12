@@ -7,5 +7,5 @@ SELECT band_name,
            IF(splitted > 0, split, '2022-01-01'),
            formed), 0) as lifespan
 FROM metal_bands
-WHERE style LIKE '%Glam rock%'
+WHERE style LIKE '%GLAM ROCK%'
 ORDER BY lifespan DESC;
