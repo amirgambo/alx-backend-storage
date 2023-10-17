@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-from pymongo import MongoClient
+"""
+Returns list of schools having a specific topic
+Prototype: def schools_by_topic(mongo_collection, topic):
+mongo_collection will be a pymongo collection object
+topic (String) will be topic searched
+"""
+
 
 def schools_by_topic(mongo_collection, topic):
-    return list(mongo_collection.find({"topics": topic}))
-
-if __name__ == "__main__":
-    client = MongoClient('mongodb://127.0.0.1:27017')
-    my_db = client.my_db
-    school_collection = my_db.school
-
-    schools = schools_by_topic(school_collection, "Python")
-    for school in schools:
-        print(school)
+    """
+    Prototype: def schools_by_topic(mongo_collection, topic):
+    Return list of schools having a specific topic
+    """
+    return mongo_collection.find({"topics": topic})
