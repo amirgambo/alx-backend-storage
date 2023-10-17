@@ -1,27 +1,39 @@
 #!/usr/bin/env python3
-"""Log stats module"""
+"""
+Provide some stats about Nginx logs stored in MongoDB
+Database: logs, Collection: nginx, Display same as example
+first line: x logs, x number of documents in this collection
+second line: Methods
+5 lines with method = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+one line with method=GET, path=/status
+"""
 from pymongo import MongoClient
 
 
-if __name__ == "__main__":
-    client = MongoClient('mongodb://127.0.0.1:27017')
-    db = client.logs.nginx
+METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
-    num_logs = db.count_documents({})
-    print(f"{num_logs} logs")
 
-    get = db.count_documents({'method': 'GET'})
-    post = db.count_documents({'method': 'POST'})
-    put = db.count_documents({'method': 'PUT'})
-    patch = db.count_documents({'method': 'PATCH'})
-    delete = db.count_documents({'method': 'DELETE'})
+def log_stats(mongo_collection, option=None):
+    """
+    Prototype: def log_stats(mongo_collection, option=None):
+    Provide some stats about Nginx logs stored in MongoDB
+    """
+    items = {}
+    if option:
+        value = mongo_collection.count_documents(
+            {"method": {"$regex": option}})
+        print(f"\tmethod {option}: {value}")
+        return
 
+    result = mongo_collection.count_documents(items)
+    print(f"{result} logs")
     print("Methods:")
-    print(f"\tmethod GET: {get}")
-    print(f"\tmethod POST: {post}")
-    print(f"\tmethod PUT: {put}")
-    print(f"\tmethod PATCH: {patch}")
-    print(f"\tmethod DELETE: {delete}")
+    for method in METHODS:
+        log_stats(nginx_collection, method)
+    status_check = mongo_collection.count_documents({"path": "/status"})
+    print(f"{status_check} status check")
 
-    status = db.count_documents({'method': 'GET', 'path': '/status'})
-    print(f"{status} status check")
+
+if __name__ == "__main__":
+    nginx_collection = MongoClient('mongodb://127.0.0.1:27017').logs.nginx
+    log_stats(nginx_collection)
