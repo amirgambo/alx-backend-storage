@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+from pymongo import MongoClient
+
+def update_documents(mongo_collection, name, new_attribute):
+    return mongo_collection.update_many({"name": name}, {"$set": new_attribute})
+
+if __name__ == "__main__":
+    client = MongoClient('mongodb://127.0.0.1:27017')
+    my_db = client.my_db
+    school_collection = my_db.school
+
+    new_attribute = {"address": "972 Mission street"}
+    result = update_documents(school_collection, "Holberton school", new_attribute)
+    print(result.modified_count)

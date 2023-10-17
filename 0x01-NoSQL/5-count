@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+from pymongo import MongoClient
+
+def count_documents(mongo_collection):
+    return mongo_collection.count_documents({})
+
+if __name__ == "__main__":
+    client = MongoClient('mongodb://127.0.0.1:27017')
+    my_db = client.my_db
+    school_collection = my_db.school
+
+    count = count_documents(school_collection)
+    print(count)
