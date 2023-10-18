@@ -6,8 +6,8 @@ from typing import Callable
 from functools import wraps
 import redis
 import requests
-
 redis_client = redis.Redis()
+
 
 def url_count(method: Callable) -> Callable:
     """counts how many times an url is accessed"""
@@ -18,10 +18,10 @@ def url_count(method: Callable) -> Callable:
         cached = redis_client.get(f'{url}')
         if cached:
             return cached.decode('utf-8')
-        redis_client.setex(f'{url}', 10, method(url))
+        redis_client.setex(f'{url}', 10, {method(url)})
         return method(*args, **kwargs)
-
     return wrapper
+
 
 @url_count
 def get_page(url: str) -> str:
@@ -29,5 +29,6 @@ def get_page(url: str) -> str:
     response = requests.get(url)
     return response.text
 
-if __name__ == "__main":
+
+if __name__ == "__main__":
     get_page('http://slowwly.robertomurray.co.uk')
