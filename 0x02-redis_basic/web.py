@@ -1,23 +1,42 @@
-#!/usr/bin/env python3
-'''A module with tools for request caching and tracking.
-'''
-import redis
 import requests
+import redis
+
+# Create a Redis client
+redis_client = redis.Redis()
 
 def get_page(url: str) -> str:
-    '''Returns the content of a URL after caching the request's response,
-    and tracking the request.
-    '''
-    if url is None or len(url.strip()) == 0:
-        return ''
-    redis_store = redis.Redis()
-    res_key = 'result:{}'.format(url)
-    req_key = 'count:{}'.format(url)
-    result = redis_store.get(res_key)
-    if result is not None:
-        redis_store.incr(req_key)
-        return result.decode('utf-8')  # Decode the bytes to a string
-    result = requests.get(url).content.decode('utf-8')
-    # Set the expiration time to 10 seconds (as an integer)
-    redis_store.setex(res_key, 10, result)
-    return result
+    # Generate the key for counting accesses
+    count_key = f"count:{url}"
+    
+    # Check if the URL content is cached
+    cached_response = redis_client.get(url)
+
+    if cached_response:
+        # If cached, increment the access count and return the cached content
+        redis_client.incr(count_key)
+        return cached_response.decode('utf-8')
+    else:
+        # If not cached, make an HTTP request to the URL
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            # Cache the response with a 10-second expiration
+            redis_client.setex(url, 10, response.text)
+            
+            # Initialize the access count to 1 for a new URL
+            redis_client.set(count_key, 1)
+            
+            return response.text
+        else:
+            return f"Failed to retrieve the page. Status code: {response.status_code}"
+
+if __name__ == "__main__":
+    # URL to retrieve
+    url = "http://slowwly.robertomurray.co.uk/delay/5000/url/http://example.com"
+    page_content = get_page(url)
+    
+    # Get the access count
+    access_count = redis_client.get(f"count:{url}").decode('utf-8')
+    
+    print(f"Page content:\n{page_content}")
+    print(f"Access count: {access_count}")
