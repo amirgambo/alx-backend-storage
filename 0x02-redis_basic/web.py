@@ -1,47 +1,24 @@
 #!/usr/bin/env python3
-'''
-Requests caching and tracking data
+'''A module with tools for request caching and tracking.
 '''
 import redis
 import requests
-from functools import wraps
-from typing import Callable
+from datetime import timedelta
 
 
-stored_redis = redis.Redis()
-'''
-Redis instance
-'''
-
-
-def cache_data(method: Callable) -> Callable:
-    '''
-    Cache the output of fetched data
-    '''
-    @wraps(method)
-    def invoker(url) -> str:
-        '''
-        Caches the output data using wrapper function
-
-        Args:
-            url: Url to use request and obtain cache data
-
-        Return: Output of request cached data
-        '''
-        stored_redis.incr(f'count:{url}')
-        result = stored_redis.get(f'result:{url}')
-        if result:
-            return result.decode('utf-8')
-        result = method(url)
-        stored_redis.set(f'count:{url}', 0)
-        stored_redis.setex(f'result:{url}', 10, result)
-        return result
-    return invoker
-
-
-@cache_data
 def get_page(url: str) -> str:
+    '''Returns the content of a URL after caching the request's response,
+    and tracking the request.
     '''
-    Returns the content of a URL after caching the request
-    '''
-    return requests.get(url).text
+    if url is None or len(url.strip()) == 0:
+        return ''
+    redis_store = redis.Redis()
+    res_key = 'result:{}'.format(url)
+    req_key = 'count:{}'.format(url)
+    result = redis_store.get(res_key)
+    if result is not None:
+        redis_store.incr(req_key)
+        return result
+    result = requests.get(url).content.decode('utf-8')
+    redis_store.setex(res_key, timedelta(seconds=10), result)
+    return result
