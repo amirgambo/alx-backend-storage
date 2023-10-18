@@ -1,34 +1,23 @@
 #!/usr/bin/env python3
-"""
-Implements an expiring web cache and tracker
-"""
-from typing import Callable
-from functools import wraps
+'''A module with tools for request caching and tracking.
+'''
 import redis
 import requests
-redis_client = redis.Redis()
 
-
-def url_count(method: Callable) -> Callable:
-    """counts how many times an url is accessed"""
-    @wraps(method)
-    def wrapper(*args, **kwargs):
-        url = args[0]
-        redis_client.incr(f"count:{url}")
-        cached = redis_client.get(f'{url}')
-        if cached:
-            return cached.decode('utf-8')
-        redis_client.setex(f'{url}', 10, {method(url)})
-        return method(*args, **kwargs)
-    return wrapper
-
-
-@url_count
 def get_page(url: str) -> str:
-    """get a page and cache value"""
-    response = requests.get(url)
-    return response.text
-
-
-if __name__ == "__main__":
-    get_page('http://slowwly.robertomurray.co.uk')
+    '''Returns the content of a URL after caching the request's response,
+    and tracking the request.
+    '''
+    if url is None or len(url.strip()) == 0:
+        return ''
+    redis_store = redis.Redis()
+    res_key = 'result:{}'.format(url)
+    req_key = 'count:{}'.format(url)
+    result = redis_store.get(res_key)
+    if result is not None:
+        redis_store.incr(req_key)
+        return result.decode('utf-8')  # Decode the bytes to a string
+    result = requests.get(url).content.decode('utf-8')
+    # Set the expiration time to 10 seconds (as an integer)
+    redis_store.setex(res_key, 10, result)
+    return result
