@@ -1,42 +1,47 @@
-import requests
+#!/usr/bin/env python3
+'''
+Requests caching and tracking data
+'''
 import redis
+import requests
+from functools import wraps
+from typing import Callable
 
-# Create a Redis client
-redis_client = redis.Redis()
 
+stored_redis = redis.Redis()
+'''
+Redis instance
+'''
+
+
+def cache_data(method: Callable) -> Callable:
+    '''
+    Cache the output of fetched data
+    '''
+    @wraps(method)
+    def invoker(url) -> str:
+        '''
+        Caches the output data using wrapper function
+
+        Args:
+            url: Url to use request and obtain cache data
+
+        Return: Output of request cached data
+        '''
+        stored_redis.incr(f'count:{url}')
+        result = stored_redis.get(f'result:{url}')
+        if result:
+            return result.decode('utf-8')
+        result = method(url)
+        stored_redis.set(f'count:{url}', 0)
+        stored_redis.setex(f'result:{url}', 10, result)
+        return result
+    return invoker
+
+
+@cache_data
 def get_page(url: str) -> str:
-    # Generate the key for counting accesses
-    count_key = f"count:{url}"
-    
-    # Check if the URL content is cached
-    cached_response = redis_client.get(url)
-
-    if cached_response:
-        # If cached, increment the access count and return the cached content
-        redis_client.incr(count_key)
-        return cached_response.decode('utf-8')
-    else:
-        # If not cached, make an HTTP request to the URL
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            # Cache the response with a 10-second expiration
-            redis_client.setex(url, 10, response.text)
-            
-            # Initialize the access count to 1 for a new URL
-            redis_client.set(count_key, 1)
-            
-            return response.text
-        else:
-            return f"Failed to retrieve the page. Status code: {response.status_code}"
-
-if __name__ == "__main__":
-    # URL to retrieve
-    url = "http://slowwly.robertomurray.co.uk/delay/5000/url/http://example.com"
-    page_content = get_page(url)
-    
-    # Get the access count
-    access_count = redis_client.get(f"count:{url}").decode('utf-8')
-    
-    print(f"Page content:\n{page_content}")
-    print(f"Access count: {access_count}")
+    '''
+    Returns the content of a URL after caching the request
+    '''
+    return requests.get(url).text
